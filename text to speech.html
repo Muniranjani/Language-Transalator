@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Translator with Speech</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(to right, rgb(60, 60, 206),rgb(69, 67, 67));
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .container {
+            background: rgb(192, 184, 194);
+            padding: 25px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            text-align: center;
+            animation: fadeIn 0.8s ease-in-out;
+        }
+
+        h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            font-size: 16px;
+            font-weight: 500;
+            display: block;
+            margin-top: 10px;
+        }
+
+        select, textarea, button {
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        textarea {
+            resize: none;
+            background: #f9f9f9;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        button {
+            background: #676564;
+            color: white;
+            border: none;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            flex: 1;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #218838;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Language Translator with Speech</h2>
+
+        <label for="source-lang">Source Language:</label>
+        <select id="source-lang">
+            <option value="en">English</option>
+            <option value="fr">French</option>
+            <option value="hi">Hindi</option>
+            <option value="ta" selected>Tamil</option>
+            <option value="es">Spanish</option>
+            <option value="ar">Arabic</option>
+            <option value="te">telugu</option>
+        </select>
+
+        <label for="target-lang">Target Language:</label>
+        <select id="target-lang">
+            <option value="en" selected>English</option>
+            <option value="fr">French</option>
+            <option value="hi">Hindi</option>
+            <option value="ta">Tamil</option>
+            <option value="es">Spanish</option>
+            <option value="ar">Arabic</option>
+            <option value="te">telugu</option>
+        </select>
+
+        <label for="input-text">Enter Text:</label>
+        <textarea id="input-text" rows="4"></textarea>
+
+        <div class="btn-group">
+            <button onclick="startSpeechRecognition()">🎤 Speak</button>
+            <button onclick="translateText()">Translate</button>
+        </div>
+
+        <label for="output-text">Translated Text:</label>
+        <textarea id="output-text" rows="4" readonly></textarea>
+
+        <button onclick="speakText()">🔊 Speak Output</button>
+    </div>
+
+    <script>
+        function translateText() {
+            var sourceLang = document.getElementById("source-lang").value;
+            var targetLang = document.getElementById("target-lang").value;
+            var text = document.getElementById("input-text").value;
+
+            if (text.trim() === "") {
+                alert("Please enter text to translate!");
+                return;
+            }
+
+            var url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sourceLang}|${targetLang}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById("output-text").value = data.responseData.translatedText;
+                })
+                .catch(error => console.error("Error:", error));
+        }
+
+        function speakText() {
+    let text = document.getElementById("output-text").value;
+    if (text.trim() === "") {
+        alert("No translated text to speak!");
+        return;
+    }
+
+    let speech = new SpeechSynthesisUtterance();
+    speech.text = text;
+
+    // Set the correct language for speech synthesis
+    let targetLang = document.getElementById("target-lang").value;
+
+    // Check if the target language is supported
+    let availableLanguages = {
+    'en': 'en-US',
+    'fr': 'fr-FR',
+    'hi': 'hi-IN',
+    'ta': 'ta-IN',
+    'es': 'es-ES',
+    'te': 'te-IN',  // Telugu
+    'ar': 'ar-SA'   // Arabic
+};
+
+
+    // Default to English if the language is not in the supported languages
+    speech.lang = availableLanguages[targetLang] || 'en-US';
+
+    speech.rate = 1;
+    window.speechSynthesis.speak(speech);
+}
+
+
+        function startSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition is not supported in this browser.");
+        return;
+    }
+
+    let recognition = new webkitSpeechRecognition();
+    recognition.lang = document.getElementById("source-lang").value;
+    recognition.continuous = false; // Keep it as false for better control
+    recognition.interimResults = false;
+
+    recognition.start();
+
+    recognition.onstart = function() {
+        console.log("Voice recognition started...");
+    };
+
+    recognition.onresult = function(event) {
+        document.getElementById("input-text").value = event.results[0][0].transcript;
+        console.log("Speech Recognized: " + event.results[0][0].transcript);
+    };
+
+    recognition.onerror = function(event) {
+        console.error("Speech Recognition Error:", event.error);
+        if (event.error === "aborted" || event.error === "network") {
+            console.log("Restarting Speech Recognition...");
+            recognition.start(); // Restart on abort
+        }
+    };
+
+    recognition.onspeechend = function() {
+        recognition.stop(); // Stop when done
+        console.log("Speech Ended.");
+    };
+}
+
+    </script>
+
+</body>
+</html>
